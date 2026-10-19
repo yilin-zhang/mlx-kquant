@@ -243,7 +243,7 @@ std::optional<mx::array> try_zero_copy_array(
   }
 
   zc_register(addr, nbytes, dtype);
-  mx::Deleter del = [ctx_holder, addr](mx::allocator::Buffer b) {
+  mx::allocator::Deleter del = [ctx_holder, addr](mx::allocator::Buffer b) {
     zc_unregister(addr);
     mx::allocator::release(b);
   };
@@ -251,12 +251,12 @@ std::optional<mx::array> try_zero_copy_array(
     const auto row_elems = static_cast<int>(win_row_bytes / isz);
     const auto rows = static_cast<int>(buf_bytes / win_row_bytes);
     const auto first = static_cast<int>(buf_off / win_row_bytes);
-    mx::array window(buf, mx::Shape{rows, row_elems}, win_dtype, del);
+    mx::array window(mx::allocator::Data(buf, std::move(del)), mx::Shape{rows, row_elems}, win_dtype);
     return mx::reshape(
         mx::slice(window, mx::Shape{first, 0}, mx::Shape{rows, row_elems}),
         shape);
   }
-  mx::array window(buf, mx::Shape{static_cast<int>(win_elems)}, win_dtype, del);
+  mx::array window(mx::allocator::Data(buf, std::move(del)), mx::Shape{static_cast<int>(win_elems)}, win_dtype);
   mx::array view = mx::slice(
       window,
       mx::Shape{static_cast<int>(off_elems)},

@@ -68,7 +68,8 @@ MS = (1, 2, 3, 4, 8, 64)
 
 @pytest.mark.parametrize("route", ["default", "mv_ext"])
 @pytest.mark.parametrize("codec", list(CODECS))
-def test_matmul_synth(codec, route, monkeypatch):
+@pytest.mark.parametrize("dtype", [mx.float16, mx.bfloat16])
+def test_matmul_synth(codec, route, dtype, monkeypatch):
     if route != "default":
         monkeypatch.setenv("KQ_QMM_ROUTE", route)
     gtype = CODECS[codec]
@@ -86,11 +87,11 @@ def test_matmul_synth(codec, route, monkeypatch):
     deq = quants.dequantize(packed, gtype).astype(np.float32)
     for M in MS:
         x_np = (rng.standard_normal((M, K)) * 0.1).astype(np.float32)
-        x = mx.array(x_np).astype(mx.float16)
+        x = mx.array(x_np).astype(dtype)
         got = kq.quantized_matmul(x, w, scales, codec, transpose=True)
         mx.eval(got)
-        g = np.array(got).astype(np.float32)
-        r = np.array(x).astype(np.float32) @ deq.T
+        g = np.array(got.astype(mx.float32))
+        r = np.array(x.astype(mx.float32)) @ deq.T
         diff = np.abs(g - r)
         max_abs = float(diff.max())
         max_rel = float((diff / (np.abs(r) + 1e-3)).max())

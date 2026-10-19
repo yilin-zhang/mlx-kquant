@@ -67,11 +67,11 @@ std::pair<mx::array, uintptr_t> arena_alloc(
         "[mlx_kquant.arena_alloc] no-copy buffer wrap rejected (needs the "
         "Metal allocator).");
   }
-  mx::Deleter del = [ptr, alloc_bytes](mx::allocator::Buffer b) {
+  mx::allocator::Deleter del = [ptr, alloc_bytes](mx::allocator::Buffer b) {
     mx::allocator::release(b);
     munmap(ptr, alloc_bytes);
   };
-  mx::array arr(buf, shape, dtype, del);
+  mx::array arr(mx::allocator::Data(buf, std::move(del)), shape, dtype);
   return {std::move(arr), reinterpret_cast<uintptr_t>(ptr)};
 }
 
